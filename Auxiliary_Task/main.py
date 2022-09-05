@@ -1,5 +1,6 @@
 import argparse
-from preprocess import  load_script_with_preprocessed, process_data,split_data
+from Auxiliary_Task.preprocess import preprocess
+from preprocess import  preprocess, process_data,split_data
 from tokenizer import build_vocab,tokenize
 from dataset import AuxDataset
 from model import AuxModel
@@ -17,10 +18,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     
-    parser.add_argument('--meta_data_pth',type=str,default= '../Deliver_dataset/meta_information/metadata.csv')
-    parser.add_argument('--mpaa_data_pth',type=str,default= '../Deliver_dataset/meta_information/MPAA_components.csv')
-    parser.add_argument('--script_pth',type=str,default= '../Deliver_dataset/Script')
-    parser.add_argument('--partition_pth',type=str,default= '../Deliver_dataset/meta_information/partitions.json')
+    parser.add_argument('--text_dir',type=str,default= '../WebOfScience_Dataset/WOS5736/X.txt')
+    parser.add_argument('--y_dir',type=str,default= '../WebOfScience_Dataset/WOS5736/Y.txt')
+    parser.add_argument('--y1_dir',type=str,default= '../WebOfScience_Dataset/WOS5736/YL1.txt')
+    parser.add_argument('--y2_dir',type=str,default= '../WebOfScience_Dataset/WOS5736/YL2.txt')
     parser.add_argument('--max_freq',type=int,default= 1)
     parser.add_argument('--train_batch_size',type=int,default= 8)
     parser.add_argument('--dev_batch_size',type=int,default= 8)
@@ -32,31 +33,33 @@ if __name__ == '__main__':
 
     #set_seed()
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    data = process_data(args.meta_data_pth,args.mpaa_data_pth,args.script_pth)
+    data = process_data(args.text_dir,args.y_dir,args.y1_dir,args.y2_dir)
+    data= preprocess(data)
+    args.num_categories = len(data['Y'].unique())
 
-    train_data,dev_data,test_data = split_data(data,args.partition_pth)
-
-    train_data,corpus = load_script_with_preprocessed(train_data,args.script_pth)
-    dev_data,_ = load_script_with_preprocessed(dev_data,args.script_pth)
-    test_data,_ = load_script_with_preprocessed(test_data,args.script_pth)
+    #train_data,dev_data,test_data = split_data(data,args.partition_pth)
+    train_data=data
+    dev_data=data
+    test_data=data
 
     print('building vocab.....')
-    id2token,token2id = build_vocab(corpus,args.max_freq)
+    id2token,token2id = build_vocab(train_data,args.max_freq)
     print('vocab builded!!')
 
     print('tokenizing....')
-    tokenized_train_script = tokenize(train_data,token2id)
-    tokenized_dev_script = tokenize(dev_data,token2id)
-    tokenized_test_script = tokenize(test_data,token2id)
+    tokenized_train_abstract = tokenize(train_data,token2id)
+    tokenized_dev_abstract = tokenize(dev_data,token2id)
+    tokenized_test_abstract = tokenize(test_data,token2id)
     print('tokenizing done!!!')
 
-    train_dataset = AuxDataset(tokenized_train_script,train_data)
-    dev_dataset = AuxDataset(tokenized_dev_script,dev_data)
-    test_dataset = AuxDataset(tokenized_test_script,test_data)
+    train_dataset = AuxDataset(tokenized_train_abstract,train_data)
+    dev_dataset = AuxDataset(tokenized_dev_abstract,dev_data)
+    test_dataset = AuxDataset(tokenized_test_abstract,test_data)
 
     train_dataloader = DataLoader(train_dataset,shuffle=True,batch_size=args.train_batch_size)
     dev_dataloader = DataLoader(dev_dataset,shuffle=True,batch_size=args.dev_batch_size)
     test_dataloader = DataLoader(test_dataset,shuffle=True,batch_size=args.dev_batch_size)
+
 
     model = AuxModel(vocab_size=len(id2token),
                     embedding_size= 512,
@@ -66,6 +69,7 @@ if __name__ == '__main__':
                     r_size=30,
                     num_layers=1,
                     dropout=0,
+                    num_categories=args.num_categories
                     )
     model.to(device)
     train(args,model,train_dataloader,dev_dataloader,test_dataloader)
