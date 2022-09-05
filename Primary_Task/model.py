@@ -8,6 +8,7 @@ class PrmModel(nn.Module):
                  attn_hidden_size,
                  cls_hidden_size,
                  r_size,
+                 num_labels,
                  num_layers=1,
                  dropout=0,
                  ):
@@ -21,12 +22,12 @@ class PrmModel(nn.Module):
         super(PrmModel, self).__init__()
 
         self.embedding = nn.Embedding(vocab_size, embedding_size)
-
+        self.num_labels=num_labels
         # lstm layer
 
         self.lstm = nn.LSTM(embedding_size, hidden_size, num_layers, dropout= dropout, batch_first=True,bidirectional=True)
         self.attention = Attention(hidden_size, attn_hidden_size, r_size)
-        self.classifier = Classifier(cls_hidden_size, r_size, 3)
+        self.classifier = Classifier(cls_hidden_size, r_size, self.num_labels)
         self.max_pooling = nn.MaxPool1d(hidden_size * 2)
 
 

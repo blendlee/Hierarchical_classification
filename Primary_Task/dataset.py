@@ -2,16 +2,16 @@ import torch
 
 class PrmDataset(torch.utils.data.Dataset):
 
-    def __init__(self,tokenized_script,data):
-        self.script = tokenized_script
-        self.rating = data['rating']
+    def __init__(self,tokenized_abstract,data):
+        self.abstract = tokenized_abstract
+        self.domain = data['Y1']
         
     def __getitem__(self,idx):
         
-        text = torch.tensor(self.script[idx])
-        rating = torch.tensor(self.rating[idx])
-        return text,rating
+        text = torch.tensor(self.abstract[idx])
+        label = torch.tensor(self.domain[idx])
+        return text,label
 
     def __len__(self):
-        return len(self.script)
+        return len(self.abstract)
 
