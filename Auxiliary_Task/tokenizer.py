@@ -6,15 +6,17 @@ import os
 import os.path
 
 
-def build_vocab(corpus,frequency):
+def build_vocab(train_data,frequency):
     tokenizer = get_tokenizer("basic_english")
     counter = Counter()
+    corpus=list(train_data['abstract'])
+
     for script in corpus:
         tokens = tokenizer(script.lower())
         counter.update(tokens)
 
     id=0
-    special_tokens = ['<pad>','<unk>','<sos>','<eos>']
+    special_tokens = ['<pad>','<unk>']
     id2token = {}
     token2id = {}
     for token in special_tokens:
@@ -36,19 +38,18 @@ def build_vocab(corpus,frequency):
     with open('vocab/token2id.json', 'w') as f:
         json.dump(token2id, f)
 
-
     return id2token,token2id
 
 
 def tokenize(data, token2id):
 
     tokenizer = get_tokenizer("basic_english")
-    scripts = list(data['script'])
-    tokenized_scripts=[]
+    abstracts = list(data['abstract'])
+    tokenized_abstracts=[]
 
     max_len = 0
-    for script in scripts:
-        tokens = tokenizer(script.lower())
+    for abstract in abstracts:
+        tokens = tokenizer(abstract.lower())
         tokenized_sentence=[]
 
         for token in tokens:
@@ -57,14 +58,14 @@ def tokenize(data, token2id):
             tokenized_sentence.append(token2id[token])
 
         max_len = max(max_len,len(tokenized_sentence))
-        tokenized_scripts.append(tokenized_sentence)
+        tokenized_abstracts.append(tokenized_sentence)
 
     #padding
 
-    for idx,tokenized_sentence in enumerate(tokenized_scripts):
+    for idx,tokenized_sentence in enumerate(tokenized_abstracts):
         if len(tokenized_sentence) < max_len:
-            tokenized_scripts[idx] += [token2id['<pad>']]*(max_len-len(tokenized_sentence))
+            tokenized_abstracts[idx] += [token2id['<pad>']]*(max_len-len(tokenized_sentence))
             
 
-    return tokenized_scripts
+    return tokenized_abstracts
 

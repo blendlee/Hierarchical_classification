@@ -11,7 +11,7 @@ def get_metric_result(preds,labels):
 
     results=[]
 
-    for i in range(5):
+    for i in range(len(labels)):
         _,max_indices = torch.max(preds[i],1)
         label = labels[i].detach().cpu()
         pred = max_indices.detach().cpu()
@@ -40,28 +40,25 @@ def train(args,model,train_dataloader,dev_dataloader,test_dataloader):
         criterion = nn.BCELoss()
 
         total_steps = len(batch_iterator)
-        total_logits=[[],[],[],[],[]]
-        total_aspects=[]
+        all_logits=[[] for _ in range(args.num_categories)]
+        all_categories=[]
         train_loss=0
-        aspect_train_loss=[0,0,0,0,0]
+        category_train_loss=[0]*args.num_categories
 
         for _, batch in enumerate(batch_iterator):
 
             optimizer.zero_grad()
 
             input = batch[0].to(device)
-            aspects= batch[1].T.to(device)
+            categories= batch[1].T.to(device)
 
             logits,attention_score = model(input)
 
-            #print(logits)
-            #aspect loss 다시보기
-            aspect_losses=[criterion(logits[i][:,1],aspects[i].float()) for i in range(5)]
-            aspect_train_loss = [aspect_train_loss[i]+aspect_losses[i] for i in range(5)]
+            category_losses = [criterion(logits[i][:,1],categories[i].float()) for i in range(args.num_categories)]
+            category_train_loss = [category_train_loss[i]+category_losses[i] for i in range(args.num_categories)]
             
-            #print(aspect_losses)
-            total_loss = sum(aspect_losses)
-            #print(total_loss)
+
+            total_loss = sum(category_losses)
             train_loss += total_loss
 
             #print('backward start')
@@ -69,44 +66,40 @@ def train(args,model,train_dataloader,dev_dataloader,test_dataloader):
             optimizer.step()
 
             #print('backward done')
-            for i in range(5):
-                total_logits[i].append(logits[i])
-            total_aspects.append(aspects)
-            #print('collecting logits done!')
+            for i in range(args.num_categories):
+                all_logits[i].append(logits[i])
+            all_categories.append(categories)
 
-        for i in range(5):
-            total_logits[i] = torch.cat(total_logits[i],dim=0)
+        for i in range(args.num_categories):
+            all_logits[i] = torch.cat(all_logits[i],dim=0)
 
 
         train_loss /= total_steps
-        aspect_train_loss = [loss/total_steps for loss in aspect_train_loss]
-        total_aspects = torch.cat(total_aspects,dim=1)
-        train_results = get_metric_result(total_logits,total_aspects)
+        category_train_loss = [loss/total_steps for loss in category_train_loss]
+        all_categories = torch.cat(all_categories,dim=1)
+        train_results = get_metric_result(all_logits,all_categories)
 
         print(f'-------epoch {epoch+1} train result-------')
         print(f'Training loss : {train_loss}')
-        print(f'Training aspects loss : {aspect_train_loss}')
-        print(f'Nudity      >> accuracy : {train_results[0][0]}, precision : {train_results[0][1]} , f1-score : {train_results[0][2]} , recall : {train_results[0][3]}')
-        print(f'Violence    >> accuracy : {train_results[1][0]}, precision : {train_results[1][1]} , f1-score : {train_results[1][2]} , recall : {train_results[1][3]}')
-        print(f'Profanity   >> accuracy : {train_results[2][0]}, precision : {train_results[2][1]} , f1-score : {train_results[2][2]} , recall : {train_results[2][3]}')
-        print(f'Substance   >> accuracy : {train_results[3][0]}, precision : {train_results[3][1]} , f1-score : {train_results[3][2]} , recall : {train_results[3][3]}')
-        print(f'frightening >> accuracy : {train_results[4][0]}, precision : {train_results[4][1]} , f1-score : {train_results[4][2]} , recall : {train_results[4][3]}')
+        print(f'Training categories loss : {category_train_loss}')
+        for i in range(args.num_categories):
+            print(f'Category {i+1}  >> accuracy : {train_results[i][0]}, precision : {train_results[i][1]} , f1-score : {train_results[i][2]} , recall : {train_results[i][3]}')
         print('\n\n')
 
 
-        evaluate(model,dev_dataloader,epoch,'Validation')
-        evaluate(model,test_dataloader,epoch,'Test')
+        evaluate(args,model,dev_dataloader,epoch,'Validation')
+        evaluate(args,model,test_dataloader,epoch,'Test')
 
 
         if not os.path.isdir('models'):
             os.mkdir('models')
-        torch.save(model.state_dict(),f'models/{epoch+1} epoch model.pth')
+        torch.save(model.state_dict(),f'models/{epoch+1}_epoch_Aux_model.pth')
 
 
 
 
 
-def evaluate(model,eval_dataloader,epoch,status):
+def evaluate(args,model,eval_dataloader,epoch,status):
     
     eval_iterator = tqdm(eval_dataloader, desc="Iteration")
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -115,10 +108,10 @@ def evaluate(model,eval_dataloader,epoch,status):
 
 
     total_steps = len(eval_iterator)
-    total_logits=[[],[],[],[],[]]
-    total_aspects=[]
+    all_logits=[[] for _ in range(args.num_categories)]
+    all_categories=[]
     eval_loss=0
-    aspect_eval_loss=[0,0,0,0,0]
+    category_train_loss=[0]*args.num_categories
 
 
     with torch.no_grad():
@@ -126,37 +119,34 @@ def evaluate(model,eval_dataloader,epoch,status):
         for _,batch in enumerate(eval_iterator):
 
             input = batch[0].to(device)
-            aspects = batch[1].T.to(device)
+            categories = batch[1].T.to(device)
 
             logits,attention_score = model(input)
 
-            aspect_losses=[criterion(logits[i][:,1],aspects[i].float()) for i in range(5)]
-            aspect_eval_loss = [aspect_eval_loss[i]+aspect_losses[i] for i in range(5)]
+            category_losses=[criterion(logits[i][:,1],categories[i].float()) for i in range(args.num_categories)]
+            category_eval_loss = [category_eval_loss[i]+category_losses[i] for i in range(args.num_categories)]
             
-            total_loss = sum(aspect_losses)
+            total_loss = sum(category_losses)
             eval_loss += total_loss
 
 
-            for i in range(5):
-                total_logits[i].append(logits[i])
-            total_aspects.append(aspects)
+            for i in range(args.num_categories):
+                all_logits[i].append(logits[i])
+            all_categories.append(categories)
 
-        for i in range(5):
-            total_logits[i] = torch.cat(total_logits[i],dim=0)
+        for i in range(args.num_categories):
+            all_logits[i] = torch.cat(all_logits[i],dim=0)
 
         eval_loss /= total_steps
-        aspect_eval_loss = [loss/total_steps for loss in aspect_eval_loss]
-        total_aspects = torch.cat(total_aspects,dim=1)
-        eval_results = get_metric_result(total_logits,total_aspects)
+        category_eval_loss = [loss/total_steps for loss in category_eval_loss]
+        all_categories = torch.cat(all_categories,dim=1)
+        eval_results = get_metric_result(all_logits,all_categories)
 
         print(f'-------epoch {epoch+1} {status} result-------')
         print(f'Evaluation loss : {eval_loss}')
-        print(f'Evaluation aspects loss : {aspect_eval_loss}')
-        print(f'Nudity      >> accuracy : {eval_results[0][0]}, precision : {eval_results[0][1]} , f1-score : {eval_results[0][2]} , recall : {eval_results[0][3]}')
-        print(f'Violence    >> accuracy : {eval_results[1][0]}, precision : {eval_results[1][1]} , f1-score : {eval_results[1][2]} , recall : {eval_results[1][3]}')
-        print(f'Profanity   >> accuracy : {eval_results[2][0]}, precision : {eval_results[2][1]} , f1-score : {eval_results[2][2]} , recall : {eval_results[2][3]}')
-        print(f'Substance   >> accuracy : {eval_results[3][0]}, precision : {eval_results[3][1]} , f1-score : {eval_results[3][2]} , recall : {eval_results[3][3]}')
-        print(f'frightening >> accuracy : {eval_results[4][0]}, precision : {eval_results[4][1]} , f1-score : {eval_results[4][2]} , recall : {eval_results[4][3]}')
+        print(f'Evaluation categories loss : {category_eval_loss}')
+        for i in range(args.num_categories):
+            print(f'Category {i+1}  >> accuracy : {eval_results[i][0]}, precision : {eval_results[i][1]} , f1-score : {eval_results[i][2]} , recall : {eval_results[i][3]}')
         print('\n\n')
 
 
