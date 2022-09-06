@@ -21,17 +21,24 @@ def extract_data_from_auxiliary_task(model,n_splits,rate,data,token2id,id2token,
 
             num_unnecessary_segments = n_splits-round(rate*n_splits)
 
-            segment_logits={}
+            segment_scores={}
             attention_label=[]
             for idx,segment in enumerate(segmented_doc):
 
-                logits,attention_scores = model(torch.tensor(segment).to(device)) #logits : (num_categories,1,n_class)
-                attention_scores = torch.cat(attention_scores,dim=0)
+                logits,attention_scores = model(torch.tensor(segment).unsqueeze(0).to(device)) #logits : (num_categories,1,n_class)
+                attention_scores = torch.cat(attention_scores,dim=0) # attention_scores : (n_categories, r_size,length) 
 
-                segment_logit = float(logits[int(gold_label)][:,1])
-                segment_logits[idx]=segment_logit
-                sorted_segment_logits = sorted(segment_logits.items(),key=lambda x : x[1])[num_unnecessary_segments:]
+                # Sort by high logit
+                #segment_logit = float(logits[int(gold_label)][:,1])
+                #segment_scores[idx]=segment_logit
                 
+                # Sort by Score
+                score1 = float(sum(torch.cat(logits,dim=0).squeeze(1)[:,1]))
+                score2 = float(torch.sum(torch.sum(torch.mean(attention_scores,dim=1),dim=1),dim=0)) 
+                score = score1+score2
+                segment_scores[idx]=score
+
+
                 if attention_calc=='sum':
                     attention_score = torch.sum(attention_scores,dim=0) # attention_scores : (n_categories, r_size,length) 
                     attention_label.append(attention_score) # attention_score : (r_size,length) 
@@ -46,11 +53,12 @@ def extract_data_from_auxiliary_task(model,n_splits,rate,data,token2id,id2token,
                     attention_label.append(attention_score) # attention_score : (r_size,length) 
 
                 
-
-            #logit 낮은 segment idx 추출
+            sorted_segment_scores= sorted(segment_scores.items(),key=lambda x : x[1])[num_unnecessary_segments:]
+            # Sort by logit : logit 낮은 segment idx 추출
+            # Sort by Score : score 낮은 segment idx 추출
             unnecessary_segments_idx=[]
             for i in range(num_unnecessary_segments):
-                unnecessary_segments_idx.append(sorted_segment_logits[i][0])
+                unnecessary_segments_idx.append(sorted_segment_scores[i][0])
 
             # 순서대로 정리된 top-k segment와 word-level attention 추가 
             new_doc=[]
@@ -58,12 +66,13 @@ def extract_data_from_auxiliary_task(model,n_splits,rate,data,token2id,id2token,
             for i in range(n_splits):
                 if i not in unnecessary_segments_idx:
                     new_doc += segmented_doc[i]
-                    word_att += attention_label[i].tolist()
+                    word_att.append(attention_label[i])
+            word_att = torch.cat(word_att,dim=1).T.tolist()
 
             #decode
             new_abstract=''
             for token in new_doc:
-                new_abstract += id2token[str(token)]
+                new_abstract += id2token[token]
                 new_abstract += ' '
             
             new_abstracts.append(new_abstract)

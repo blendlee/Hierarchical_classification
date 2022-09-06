@@ -1,8 +1,9 @@
 import argparse
 from preprocess import  preprocess, process_data,split_data
-from tokenizer import build_vocab,tokenize
+from tokenizer import build_vocab,tokenize,pad_sequence_for_attention
 from dataset import AuxBasedPrmDataset
-from model import AuxBasedPrmModel,AuxModel
+from model import AuxBasedPrmModel
+from ..Auxiliary_Task.model import AuxModel
 from extract_document import extract_data_from_auxiliary_task
 from train import train
 
@@ -40,7 +41,7 @@ if __name__ == '__main__':
     data = process_data(args.text_dir,args.y_dir,args.y1_dir,args.y2_dir)
     data= preprocess(data)
     args.num_labels=len(data['Y1'].unique())
-
+    args.num_categories=len(data['Y'].unique())
     train_data,dev_data,test_data = split_data(data)
     print('building vocab.....')
     id2token,token2id = build_vocab(train_data,args.max_freq)
@@ -58,7 +59,7 @@ if __name__ == '__main__':
                                 dropout=0,
                                 num_categories=args.num_categories
                                 )
-    auxiliary_model.load_state_dict(args.aux_model_dir)
+    auxiliary_model.load_state_dict(torch.load(args.aux_model_dir))
     auxiliary_model.to(device)
 
     #Auxiliary Task
@@ -70,15 +71,20 @@ if __name__ == '__main__':
 
     #Primary Task
     print('tokenizing....')
-    tokenized_train_abstract = tokenize(list(train_data['extracted_abstracts']),token2id)
-    tokenized_dev_abstract = tokenize(list(dev_data['extracted_abstracts']),token2id)
-    tokenized_test_abstract = tokenize(list(test_data['extracted_abstracts']),token2id)
+    tokenized_train_abstract,train_max_len = tokenize(list(train_data['extracted_abstracts']),token2id)
+    tokenized_dev_abstract,dev_max_len = tokenize(list(dev_data['extracted_abstracts']),token2id)
+    tokenized_test_abstract,test_max_len = tokenize(list(test_data['extracted_abstracts']),token2id)
     print('tokenizing done!!!')
 
 
-    train_dataset = AuxBasedPrmDataset(tokenized_train_abstract,train_data)
-    dev_dataset = AuxBasedPrmDataset(tokenized_dev_abstract,dev_data)
-    test_dataset = AuxBasedPrmDataset(tokenized_test_abstract,test_data)
+    train_att = pad_sequence_for_attention(train_max_len,list(train_data['word_level_attentions']))
+    dev_att = pad_sequence_for_attention(dev_max_len,list(dev_data['word_level_attentions']))
+    test_att = pad_sequence_for_attention(test_max_len,list(test_data['word_level_attentions']))
+    
+
+    train_dataset = AuxBasedPrmDataset(tokenized_train_abstract,train_att,train_data)
+    dev_dataset = AuxBasedPrmDataset(tokenized_dev_abstract,dev_att,dev_data)
+    test_dataset = AuxBasedPrmDataset(tokenized_test_abstract,test_att,test_data)
 
     train_dataloader = DataLoader(train_dataset,shuffle=True,batch_size=args.train_batch_size)
     dev_dataloader = DataLoader(dev_dataset,shuffle=True,batch_size=args.dev_batch_size)

@@ -58,7 +58,6 @@ def tokenize(abstracts, token2id):
 
     else:
         tokenized_abstracts=[]
-
         max_len = 0
         for abstract in abstracts:
             tokens = tokenizer(abstract.lower())
@@ -71,10 +70,21 @@ def tokenize(abstracts, token2id):
 
             max_len = max(max_len,len(tokenized_sentence))
             tokenized_abstracts.append(tokenized_sentence)
+        return pad_sequence(max_len,tokenized_abstracts),max_len
 
-        #padding
-        for idx,tokenized_sentence in enumerate(tokenized_abstracts):
-            if len(tokenized_sentence) < max_len:
-                tokenized_abstracts[idx] += [token2id['<pad>']]*(max_len-len(tokenized_sentence))
-                
-        return tokenized_abstracts
+
+def pad_sequence(max_len,tokenized_abstracts):
+
+    for idx,tokenized_sentence in enumerate(tokenized_abstracts):
+        if len(tokenized_sentence) < max_len:
+            tokenized_abstracts[idx] += [0]*(max_len-len(tokenized_sentence))
+                    
+    return tokenized_abstracts
+
+def pad_sequence_for_attention(max_len,attentions):
+
+    size= len(attentions[0][0])
+    for idx,att in enumerate(attentions):
+        if len(att) < max_len:
+            attentions[idx] += [[0]*size for _ in range(max_len-len(att))]
+    return attentions
