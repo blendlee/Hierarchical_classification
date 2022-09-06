@@ -61,7 +61,6 @@ def tokenize(data, token2id):
         tokenized_abstracts.append(tokenized_sentence)
 
     #padding
-
     for idx,tokenized_sentence in enumerate(tokenized_abstracts):
         if len(tokenized_sentence) < max_len:
             tokenized_abstracts[idx] += [token2id['<pad>']]*(max_len-len(tokenized_sentence))

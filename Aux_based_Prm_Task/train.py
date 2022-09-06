@@ -1,10 +1,11 @@
 from sklearn.metrics import f1_score, recall_score, precision_score
-from tqdm.notebook import trange,tqdm
+from tqdm import trange,tqdm
 
 import os
 import os.path
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 def get_metric_result(preds,labels):
 
@@ -46,11 +47,14 @@ def train(args,prm_model,train_dataloader,dev_dataloader,test_dataloader):
             optimizer.zero_grad()
 
             input = batch[0].to(device)
-            attention_labels = batch[1].to(device) #(batch_size , r_size, length)
+            attention_labels = torch.transpose(batch[1],1,2).to(device) #(batch_size , r_size, length)
             labels= batch[2].type(torch.LongTensor).to(device)
 
 
             domain_logits,pred_attention_score = prm_model(input)
+
+            pred_attention_score = F.log_softmax(pred_attention_score,dim=2)
+            attention_labels = F.softmax(attention_labels,dim=2)
 
             domain_loss = domain_criterion(domain_logits,labels)
             attention_loss = attention_criterion(pred_attention_score,attention_labels)
@@ -118,7 +122,7 @@ def evaluate(args,model,eval_dataloader,epoch,status):
         for _,batch in enumerate(eval_iterator):
 
             input = batch[0].to(device)
-            attention_labels = batch[1].to(device) #(batch_size , r_size, length)
+            attention_labels = torch.transpose(batch[1],1,2).to(device) #(batch_size , r_size, length)
             labels= batch[2].type(torch.LongTensor).to(device)
 
             domain_logits,pred_attention_score = model(input)

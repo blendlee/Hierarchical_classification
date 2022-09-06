@@ -70,7 +70,7 @@ class Attention(nn.Module):
         annt_matrix = self.softmax(x)
         emb_matrix = torch.matmul(annt_matrix, hidden_states)
 
-        return emb_matrix, annt_matrix
+        return emb_matrix, x
 
 class Classifier(nn.Module):
     def __init__(self, hidden_size, prior_size, n_class):
