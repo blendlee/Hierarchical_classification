@@ -19,7 +19,7 @@ def get_metric_result(preds,labels):
 
     return results
 
-def train(args,aux_model,prm_model,train_dataloader,dev_dataloader,test_dataloader):
+def train(args,prm_model,train_dataloader,dev_dataloader,test_dataloader):
     
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     optimizer=torch.optim.Adam(prm_model.parameters(),lr=args.learning_rate,weight_decay=args.weight_decay)
@@ -30,33 +30,36 @@ def train(args,aux_model,prm_model,train_dataloader,dev_dataloader,test_dataload
 
         batch_iterator = tqdm(train_dataloader, desc="Iteration")
         prm_model.train()
-        criterion = nn.CrossEntropyLoss()
+        domain_criterion = nn.CrossEntropyLoss()
+        attention_criterion = nn.KLDivLoss()
 
         total_steps = len(batch_iterator)
         all_logits=[]
         all_labels=[]
-        train_loss=0
 
+        train_loss=0
+        train_domain_loss=0
+        train_att_loss =0
 
         for _, batch in enumerate(batch_iterator):
 
             optimizer.zero_grad()
 
             input = batch[0].to(device)
-            areas = batch[1].T.to(device)
+            attention_labels = batch[1].to(device) #(batch_size , r_size, length)
             labels= batch[2].type(torch.LongTensor).to(device)
 
-            area_logits,gold_attention_score = aux_model(input)
-
-            input = segment_document_by_logit(input,area_logits)
 
             domain_logits,pred_attention_score = prm_model(input)
 
             domain_loss = domain_criterion(domain_logits,labels)
-            attention_loss = attention_criterion(gold_attention_score,pred_attention_score)
-            loss = domain_loss+attention_loss
+            attention_loss = attention_criterion(pred_attention_score,attention_labels)
+
+            loss = domain_loss+args.lambda_rate*attention_loss
 
             train_loss += loss
+            train_domain_loss += domain_loss
+            train_att_loss += attention_loss
 
             loss.backward()
             optimizer.step()
@@ -69,17 +72,21 @@ def train(args,aux_model,prm_model,train_dataloader,dev_dataloader,test_dataload
         preds = torch.argmax(all_logits,dim=1)
 
         train_loss /= total_steps
+        train_domain_loss /= total_steps
+        train_att_loss /= total_steps
 
         train_results = get_metric_result(preds,all_labels)
 
         print(f'-------epoch {epoch+1} train result-------')
-        print(f'Training loss : {train_loss}')
+        print(f'Training loss  : {train_loss}')
+        print(f'Domain loss    : {train_domain_loss}')
+        print(f'Attention loss : {train_att_loss}')
         print(f'Domain   >> accuracy : {train_results[0]}, precision : {train_results[1]} , f1-score : {train_results[2]} , recall : {train_results[3]}')
         print('\n\n')
 
 
-        evaluate(aux_model,prm_model,dev_dataloader,epoch,'Validation')
-        evaluate(aux_model,prm_model,test_dataloader,epoch,'Test')
+        evaluate(args,prm_model,dev_dataloader,epoch,'Validation')
+        evaluate(args,prm_model,test_dataloader,epoch,'Test')
 
 
         if not os.path.isdir('models'):
@@ -90,18 +97,20 @@ def train(args,aux_model,prm_model,train_dataloader,dev_dataloader,test_dataload
 
 
 
-def evaluate(aux_model,prm_model,eval_dataloader,epoch,status):
+def evaluate(args,model,eval_dataloader,epoch,status):
     
     eval_iterator = tqdm(eval_dataloader, desc="Iteration")
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    criterion = nn.CrossEntropyLoss()
-
+    domain_criterion = nn.CrossEntropyLoss()
+    attention_criterion = nn.KLDivLoss()
 
     total_steps = len(eval_iterator)
     all_logits=[]
     all_labels=[]
     eval_loss=0
+    eval_domain_loss=0
+    eval_att_loss=0
 
 
     with torch.no_grad():
@@ -109,19 +118,27 @@ def evaluate(aux_model,prm_model,eval_dataloader,epoch,status):
         for _,batch in enumerate(eval_iterator):
 
             input = batch[0].to(device)
-            labels= batch[1].type(torch.LongTensor).to(device)
+            attention_labels = batch[1].to(device) #(batch_size , r_size, length)
+            labels= batch[2].type(torch.LongTensor).to(device)
 
-            logits,attention_score = model(input)
+            domain_logits,pred_attention_score = model(input)
 
+            domain_loss = domain_criterion(domain_logits,labels)
+            attention_loss = attention_criterion(pred_attention_score,attention_labels)
 
-            loss = criterion(logits,labels)
+            loss = domain_loss+args.lambda_rate*attention_loss
+
             eval_loss += loss
+            eval_domain_loss += domain_loss
+            eval_att_loss += attention_loss
 
-
-            all_logits.append(logits)
+            all_logits.append(domain_logits)
             all_labels.append(labels)
 
         eval_loss /= total_steps
+        eval_domain_loss /= total_steps
+        eval_att_loss /= total_steps
+
         all_logits = torch.cat(all_logits,dim=0)
         all_labels = torch.cat(all_labels,dim=0)
         preds = torch.argmax(all_logits,dim=1)
@@ -130,6 +147,8 @@ def evaluate(aux_model,prm_model,eval_dataloader,epoch,status):
 
         print(f'-------epoch {epoch+1} {status} result-------')
         print(f'Evaluation loss : {eval_loss}')
+        print(f'Domain loss    : {eval_domain_loss}')
+        print(f'Attention loss : {eval_att_loss}')
         print(f'Domain   >> accuracy : {eval_results[0]}, precision : {eval_results[1]} , f1-score : {eval_results[2]} , recall : {eval_results[3]}')
         print('\n\n')
 

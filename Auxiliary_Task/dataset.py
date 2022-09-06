@@ -10,9 +10,9 @@ class AuxDataset(torch.utils.data.Dataset):
         
     def __getitem__(self,idx):
         
-        text = torch.tensor(self.script[idx])
+        text = torch.tensor(self.abstract[idx])
         categories = [0]*self.num_categories
-        categories[self.y[idx]]=1
+        categories[int(self.y[idx])]=1
         label = torch.tensor(categories)
         return text,label
 

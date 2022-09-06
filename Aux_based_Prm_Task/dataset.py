@@ -4,15 +4,15 @@ class AuxBasedPrmDataset(torch.utils.data.Dataset):
 
     def __init__(self,tokenized_abstract,data):
         self.abstract = tokenized_abstract
+        self.word_attention = data['word_level_attentions']
         self.domain = data['Y1']
-        self.area = data['Y']
         
     def __getitem__(self,idx):
         
         text = torch.tensor(self.abstract[idx])
-        area = torch.tensor(self.area[idx])
-        label = torch.tensor(self.domain[idx])
-        return text,area,label
+        attetion_label = torch.tensor(self.word_attention[idx])
+        label = torch.tensor(int(self.domain[idx]))
+        return text,attetion_label,label
 
     def __len__(self):
         return len(self.abstract)

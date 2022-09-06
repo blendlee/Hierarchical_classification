@@ -1,5 +1,4 @@
 import argparse
-from Auxiliary_Task.preprocess import preprocess
 from preprocess import  preprocess, process_data,split_data
 from tokenizer import build_vocab,tokenize
 from dataset import AuxDataset
@@ -7,7 +6,7 @@ from model import AuxModel
 from train import train
 import argparse
 
-from torch.utils.data import RandomSampler, DataLoader
+from torch.utils.data import DataLoader
 import torch
 
 
@@ -37,10 +36,7 @@ if __name__ == '__main__':
     data= preprocess(data)
     args.num_categories = len(data['Y'].unique())
 
-    #train_data,dev_data,test_data = split_data(data,args.partition_pth)
-    train_data=data
-    dev_data=data
-    test_data=data
+    train_data,dev_data,test_data = split_data(data)
 
     print('building vocab.....')
     id2token,token2id = build_vocab(train_data,args.max_freq)

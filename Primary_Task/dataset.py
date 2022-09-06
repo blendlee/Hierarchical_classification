@@ -9,7 +9,7 @@ class PrmDataset(torch.utils.data.Dataset):
     def __getitem__(self,idx):
         
         text = torch.tensor(self.abstract[idx])
-        label = torch.tensor(self.domain[idx])
+        label = torch.tensor(int(self.domain[idx]))
         return text,label
 
     def __len__(self):

@@ -35,10 +35,7 @@ if __name__ == '__main__':
     data= preprocess(data)
     args.num_labels=len(data['Y1'].unique())
 
-    #train_data,dev_data,test_data = split_data(data,args.partition_pth)
-    train_data=data
-    dev_data=data
-    test_data=data
+    train_data,dev_data,test_data = split_data(data)
 
     print('building vocab.....')
     id2token,token2id = build_vocab(train_data,args.max_freq)
