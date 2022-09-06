@@ -61,13 +61,13 @@ class AuxModel(nn.Module):
 
         self.num_categories=num_categories
         self.embedding = nn.Embedding(vocab_size, embedding_size)
-
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         # lstm layer
 
         self.lstm = nn.LSTM(embedding_size, hidden_size, num_layers, dropout= dropout, batch_first=True,bidirectional=True)
 
-        self.attention_blocks = [Attention(hidden_size, attn_hidden_size, r_size) for _ in range(self.num_categories)]
-        self.classifier_blocks = [AuxClassifier(cls_hidden_size, r_size, 2) for _ in range(self.num_categories)]
+        self.attention_blocks = [Attention(hidden_size, attn_hidden_size, r_size).to(self.device) for _ in range(self.num_categories)]
+        self.classifier_blocks = [AuxClassifier(cls_hidden_size, r_size, 2).to(self.device) for _ in range(self.num_categories)]
         self.max_pooling = nn.MaxPool1d(hidden_size * 2)
 
 
@@ -85,6 +85,7 @@ class AuxModel(nn.Module):
             outputs.append(output)
             attn_scores.append(attn_score)
 
+        #attn_scores = torch.cat(attn_scores,dim=0)
         return outputs,attn_scores
 
 

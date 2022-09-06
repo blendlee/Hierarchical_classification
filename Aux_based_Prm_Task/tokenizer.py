@@ -41,30 +41,40 @@ def build_vocab(train_data,frequency):
     return id2token,token2id
 
 
-def tokenize(data, token2id):
+def tokenize(abstracts, token2id):
 
     tokenizer = get_tokenizer("basic_english")
-    abstracts = list(data['abstract'])
-    tokenized_abstracts=[]
 
-    max_len = 0
-    for abstract in abstracts:
-        tokens = tokenizer(abstract.lower())
+    if isinstance(abstracts,str) :
+        tokens = tokenizer(abstracts.lower())
         tokenized_sentence=[]
-
         for token in tokens:
             if token not in token2id:
                 token='<unk>'
             tokenized_sentence.append(token2id[token])
 
-        max_len = max(max_len,len(tokenized_sentence))
-        tokenized_abstracts.append(tokenized_sentence)
+        return tokenized_sentence
 
-    #padding
 
-    for idx,tokenized_sentence in enumerate(tokenized_abstracts):
-        if len(tokenized_sentence) < max_len:
-            tokenized_abstracts[idx] += [token2id['<pad>']]*(max_len-len(tokenized_sentence))
-            
+    else:
+        tokenized_abstracts=[]
 
-    return tokenized_abstracts
+        max_len = 0
+        for abstract in abstracts:
+            tokens = tokenizer(abstract.lower())
+            tokenized_sentence=[]
+
+            for token in tokens:
+                if token not in token2id:
+                    token='<unk>'
+                tokenized_sentence.append(token2id[token])
+
+            max_len = max(max_len,len(tokenized_sentence))
+            tokenized_abstracts.append(tokenized_sentence)
+
+        #padding
+        for idx,tokenized_sentence in enumerate(tokenized_abstracts):
+            if len(tokenized_sentence) < max_len:
+                tokenized_abstracts[idx] += [token2id['<pad>']]*(max_len-len(tokenized_sentence))
+                
+        return tokenized_abstracts

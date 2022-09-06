@@ -1,6 +1,6 @@
 import pandas as pd
 import re
-
+from sklearn.model_selection import ShuffleSplit
 
 def process_data(text_dir,y_dir,y1_dir,y2_dir):
 
@@ -40,5 +40,21 @@ def preprocess(df):
 
     return df
 
-def split_data(data,partition_pth):
-    pass
+def split_data(data):
+    train_sss = ShuffleSplit(n_splits=1, test_size=0.2, random_state=0)
+    test_sss = ShuffleSplit(n_splits=1, test_size=0.5, random_state=0)
+
+    indices = range(len(data))
+    for train_index, test_val_index in train_sss.split(indices):
+        train_index, test_val_index=train_index, test_val_index
+    train_data=data.iloc[train_index].reset_index(drop=True)
+    test_val_data=data.iloc[test_val_index].reset_index(drop=True)
+
+    test_val_indices =range(len(test_val_data))
+    for val_index, test_index in test_sss.split(test_val_indices):
+        val_index, test_index=val_index, test_index
+
+    val_data = test_val_data.iloc[val_index].reset_index(drop=True)
+    test_data = test_val_data.iloc[test_index].reset_index(drop=True)
+
+    return train_data,val_data,test_data

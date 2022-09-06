@@ -1,5 +1,5 @@
 from sklearn.metrics import f1_score, recall_score, precision_score
-from tqdm.notebook import trange,tqdm
+from tqdm import trange,tqdm
 
 import os
 import os.path
