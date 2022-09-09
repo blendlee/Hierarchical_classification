@@ -5,7 +5,7 @@ import torch
 
 
 
-def extract_data_from_auxiliary_task(model,n_splits,rate,data,token2id,id2token,attention_calc):
+def extract_data_from_auxiliary_task(model,n_splits,rate,k,data,token2id,id2token,attention_calc):
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     with torch.no_grad():
@@ -24,7 +24,6 @@ def extract_data_from_auxiliary_task(model,n_splits,rate,data,token2id,id2token,
             segment_scores={}
             attention_label=[]
             for idx,segment in enumerate(segmented_doc):
-
                 logits,attention_scores = model(torch.tensor(segment).unsqueeze(0).to(device)) #logits : (num_categories,1,n_class)
                 attention_scores = torch.cat(attention_scores,dim=0) # attention_scores : (n_categories, r_size,length) 
 
@@ -40,17 +39,33 @@ def extract_data_from_auxiliary_task(model,n_splits,rate,data,token2id,id2token,
 
 
                 if attention_calc=='sum':
-                    attention_score = torch.sum(attention_scores,dim=0) # attention_scores : (n_categories, r_size,length) 
-                    attention_label.append(attention_score) # attention_score : (r_size,length) 
+                    attention_score = torch.sum(attention_scores,dim=0) # attention_scores : (n_categories, r_size,length)
+                                                                        # attention_score : (r_size,length) 
+                    # top k word idx 추출
+                    if k >= len(attention_score.size()[1]):
+                        k=len(attention_score.size()[1])
+                    ones= torch.ones(attention_score.size())
+                    attention_mask = torch.zeros(attention_score.size()).scatter(1,torch.topk(attention_score,2,dim=1)[1],ones)
+                    attention_label.append(attention_mask)
+
 
                 elif attention_calc=='gold':
-                    attention_score = attention_scores[int(gold_label)]*model.num_categories
-                    attention_label.append(attention_score) # attention_score : (r_size,length) 
+                    attention_score = attention_scores[int(gold_label)]
+
+                    if k >= len(attention_score.size()[1]):
+                        k=len(attention_score.size()[1])
+                    ones= torch.ones(attention_score.size())
+                    attention_mask = torch.zeros(attention_score.size()).scatter(1,torch.topk(attention_score,2,dim=1)[1],ones)
+                    attention_label.append(attention_mask)
 
                 elif attention_calc=='pred':
                     pred_label =  int(torch.cat(logits,dim=0).squeeze(1)[:,1].argmax())
-                    attention_score = attention_scores[int(pred_label)]*model.num_categories
-                    attention_label.append(attention_score) # attention_score : (r_size,length) 
+                    attention_score = attention_scores[int(pred_label)]
+                    if k >= len(attention_score.size()[1]):
+                        k=len(attention_score.size()[1])
+                    ones= torch.ones(attention_score.size())
+                    attention_mask = torch.zeros(attention_score.size()).scatter(1,torch.topk(attention_score,2,dim=1)[1],ones)
+                    attention_label.append(attention_mask)
 
                 
             sorted_segment_scores= sorted(segment_scores.items(),key=lambda x : x[1])[num_unnecessary_segments:]

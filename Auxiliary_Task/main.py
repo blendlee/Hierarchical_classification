@@ -63,7 +63,7 @@ if __name__ == '__main__':
                     hidden_size=300,
                     attn_hidden_size=150,
                     cls_hidden_size=3000,
-                    r_size=30,
+                    r_size=1,
                     num_layers=1,
                     dropout=0,
                     num_categories=args.num_categories

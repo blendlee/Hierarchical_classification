@@ -65,9 +65,36 @@ class AuxModel(nn.Module):
         # lstm layer
 
         self.lstm = nn.LSTM(embedding_size, hidden_size, num_layers, dropout= dropout, batch_first=True,bidirectional=True)
+        # for i in range(self.num_categories):
+        #      globals()['self.attention_'+str(i)] = Attention(hidden_size, attn_hidden_size, r_size).to(device)
+        #      globals()['self.classifier_'+str(i)] = Classifier(cls_hidden_size, r_size, 2).to(device)
+        
+        #self.attention_blocks = [Attention(hidden_size, attn_hidden_size, r_size).to(self.device) for _ in range(self.num_categories)]
+        #self.classifier_blocks = [Classifier(cls_hidden_size, r_size, 2).to(self.device) for _ in range(self.num_categories)]
+        self.attention_1 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_2 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_3 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_4 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_5 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_6 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_7 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_8 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_9 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_10 = Attention(hidden_size, attn_hidden_size, r_size)
+        self.attention_11 = Attention(hidden_size, attn_hidden_size, r_size)
 
-        self.attention_blocks = [Attention(hidden_size, attn_hidden_size, r_size).to(self.device) for _ in range(self.num_categories)]
-        self.classifier_blocks = [AuxClassifier(cls_hidden_size, r_size, 2).to(self.device) for _ in range(self.num_categories)]
+        self.classifier_1 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_2 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_3 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_4 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_5 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_6 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_7 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_8 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_9 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_10 = AuxClassifier(cls_hidden_size, r_size, 2)
+        self.classifier_11 = AuxClassifier(cls_hidden_size, r_size, 2)
+
         self.max_pooling = nn.MaxPool1d(hidden_size * 2)
 
 
@@ -77,15 +104,64 @@ class AuxModel(nn.Module):
 
         outputs=[]
         attn_scores=[]
-        for i in range(self.num_categories):
-            embs, attn_score = self.attention_blocks[i](hidden_states) # embs : (batch, r_size, lstm_hidden_states * 2)
-            pooled = torch.squeeze(self.max_pooling(embs), 2) # pooled : (batch, r_size)
-            output = self.classifier_blocks[i](pooled) # outputs_1 : (batch, n_class)
+        # for i in range(self.num_categories):
+        #     embs, attn_score = globals()['self.attention_'+str(i)](hidden_states) # embs : (batch, r_size, lstm_hidden_states * 2)
+        #     pooled = torch.squeeze(self.max_pooling(embs), 2) # pooled : (batch, r_size)
+        #     output = globals()['self.classifier_'+str(i)](pooled) # outputs_1 : (batch, n_class)
 
-            outputs.append(output)
-            attn_scores.append(attn_score)
+        #     outputs.append(output)
+        #     attn_scores.append(attn_score)
 
-        #attn_scores = torch.cat(attn_scores,dim=0)
+        embs1,attn_score1 = self.attention_1(hidden_states)
+        pooled1 = torch.squeeze(self.max_pooling(embs1),2)
+        output1 = self.classifier_1(pooled1)
+
+        embs2,attn_score2 = self.attention_1(hidden_states)
+        pooled2 = torch.squeeze(self.max_pooling(embs2),2)
+        output2 = self.classifier_2(pooled2)
+
+        embs3,attn_score3 = self.attention_3(hidden_states)
+        pooled3 = torch.squeeze(self.max_pooling(embs3),2)
+        output3 = self.classifier_3(pooled3)
+
+        embs4,attn_score4 = self.attention_4(hidden_states)
+        pooled4 = torch.squeeze(self.max_pooling(embs4),2)
+        output4 = self.classifier_4(pooled4)
+
+        embs5,attn_score5 = self.attention_5(hidden_states)
+        pooled5 = torch.squeeze(self.max_pooling(embs5),2)
+        output5 = self.classifier_5(pooled5)
+
+        embs6,attn_score6 = self.attention_6(hidden_states)
+        pooled6 = torch.squeeze(self.max_pooling(embs6),2)
+        output6 = self.classifier_6(pooled6)
+
+        embs7,attn_score7 = self.attention_7(hidden_states)
+        pooled7 = torch.squeeze(self.max_pooling(embs7),2)
+        output7 = self.classifier_7(pooled7)
+
+        embs7,attn_score7 = self.attention_7(hidden_states)
+        pooled7 = torch.squeeze(self.max_pooling(embs7),2)
+        output7 = self.classifier_7(pooled7)
+
+        embs8,attn_score8 = self.attention_8(hidden_states)
+        pooled8 = torch.squeeze(self.max_pooling(embs8),2)
+        output8 = self.classifier_8(pooled8)
+
+        embs9,attn_score9 = self.attention_9(hidden_states)
+        pooled9 = torch.squeeze(self.max_pooling(embs9),2)
+        output9 = self.classifier_9(pooled9)
+
+        embs10,attn_score10 = self.attention_10(hidden_states)
+        pooled10 = torch.squeeze(self.max_pooling(embs10),2)
+        output10 = self.classifier_10(pooled10)
+
+        embs11,attn_score11 = self.attention_11(hidden_states)
+        pooled11 = torch.squeeze(self.max_pooling(embs11),2)
+        output11 = self.classifier_11(pooled11)
+
+        outputs=[output1,output2,output3,output4,output5,output6,output7,output8,output9,output10,output11]
+        attn_scores=[attn_score1,attn_score2,attn_score3,attn_score4,attn_score5,attn_score6,attn_score7,attn_score8,attn_score9,attn_score10,attn_score11]
         return outputs,attn_scores
 
 

@@ -32,7 +32,8 @@ if __name__ == '__main__':
     parser.add_argument('--n_splits',type=int,default=30)
     parser.add_argument('--segment_rate',type=float,default=0.9)
     parser.add_argument('--lambda_rate',type=float,default=0.1)
-    parser.add_argument('--r_size',type=int,default=30)
+    parser.add_argument('--r_size',type=int,default=1)
+    parser.add_argument('--k',type=int,default=1)
     args = parser.parse_args()
 
 
@@ -64,9 +65,9 @@ if __name__ == '__main__':
 
     #Auxiliary Task
     print('Extracting document & Data by Auxiliary Model.......')
-    train_data = extract_data_from_auxiliary_task(auxiliary_model,args.n_splits,args.segment_rate,train_data,token2id,id2token,'sum')
-    dev_data = extract_data_from_auxiliary_task(auxiliary_model,args.n_splits,args.segment_rate,dev_data,token2id,id2token,'sum')
-    test_data = extract_data_from_auxiliary_task(auxiliary_model,args.n_splits,args.segment_rate,test_data,token2id,id2token,'sum')
+    train_data = extract_data_from_auxiliary_task(auxiliary_model,args.n_splits,args.segment_rate,args.k,train_data,token2id,id2token,'sum')
+    dev_data = extract_data_from_auxiliary_task(auxiliary_model,args.n_splits,args.segment_rate,args.k,dev_data,token2id,id2token,'sum')
+    test_data = extract_data_from_auxiliary_task(auxiliary_model,args.n_splits,args.segment_rate,args.k,test_data,token2id,id2token,'sum')
     print('Extracting done!!!!!')
 
     #Primary Task
