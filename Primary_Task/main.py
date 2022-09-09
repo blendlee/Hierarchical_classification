@@ -7,10 +7,22 @@ from train import train
 
 from torch.utils.data import DataLoader
 import torch
+import os
+import numpy as np
+import random
 
 
+def set_seed(seed: int):
 
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    #torch.backends.cudnn.deterministic = True
+    #torch.backends.cudnn.benchmark = False
+    #torch.backends.cudnn.enabled = False
 
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -29,7 +41,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 
-    #set_seed()
+    set_seed(42)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     data = process_data(args.text_dir,args.y_dir,args.y1_dir,args.y2_dir)
     data= preprocess(data)

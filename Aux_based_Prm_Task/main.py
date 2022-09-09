@@ -2,16 +2,27 @@ import argparse
 from preprocess import  preprocess, process_data,split_data
 from tokenizer import build_vocab,tokenize,pad_sequence_for_attention
 from dataset import AuxBasedPrmDataset
-from model import AuxBasedPrmModel
-from ..Auxiliary_Task.model import AuxModel
+from model import AuxBasedPrmModel,AuxModel
 from extract_document import extract_data_from_auxiliary_task
 from train import train
 
 from torch.utils.data import DataLoader
 import torch
+import os
+import numpy as np
+import random
 
+def set_seed(seed: int):
 
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    #torch.backends.cudnn.deterministic = True
+    #torch.backends.cudnn.benchmark = False
+    #torch.backends.cudnn.enabled = False
 
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
 
 if __name__ == '__main__':
